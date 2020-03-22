@@ -6,7 +6,10 @@
     "start": "func start",
     "test": "node test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "azure-blob-storage": "github:joemccann/azure-blob-storage",
+    "dotenv": "^8.2.0"
+  },
   "devDependencies": {
     "standard": "^14.3.3",
     "tape": "^4.13.2"
