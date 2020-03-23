@@ -1,6 +1,6 @@
 # Azure Blob Storage File Merge Azure Function
 
-Merge a group of JSON files from Azure Blob Storage and return the single
+🗂 Merge a group of JSON files from Azure Blob Storage and return the single
 merged file.
 
 ## Usage
