@@ -10,6 +10,10 @@ const account = process.env.BLOB_SERVICE_ACCOUNT_NAME
 const container = process.env.AZURE_STORAGE_CONTAINER
 const prefix = process.env.FILENAME_PREFIX || ''
 
+//
+// Currently ascending sort by `messageId`.
+// Modify as you see fit for sorting.
+//
 const sortById = (a, b) => {
   const id1 = a.messageId
   const id2 = b.messageId
@@ -23,11 +27,14 @@ const sortById = (a, b) => {
   return comparison
 }
 
+//
+// Creating a unique Map of results sorting by their `title`.
+// Modify as you see fit for sorting.
+//
 const unique = ({ input = [] }) => {
   if (!input.length) return { err: new Error('Missing `input` parameter.') }
   const data = []
   const map = new Map()
-  console.log('>>> Creating unique Map...')
   for (const item of input) {
     //
     // Check to see if the Map has the title (could check URL)
@@ -43,7 +50,7 @@ const unique = ({ input = [] }) => {
   return { data }
 }
 
-module.exports = async function (context, myTimer) {
+module.exports = async (ctx) => {
   //
   // Fetch all files in container
   //
@@ -83,20 +90,35 @@ module.exports = async function (context, myTimer) {
       container,
       filename
     })
-    if (err) return { err }
 
-    return { data: JSON.parse(data) }
+    if (err) {
+      console.error(err)
+      return { err }
+    }
+
+    let parsed = null
+
+    try {
+      parsed = JSON.parse(data)
+    } catch (err) {
+      console.error(err)
+      return { err }
+    }
+
+    return { data: parsed }
   })
 
+  //
+  // This section flattens the results of
+  // the promises as a flat array.
+  // Modify as you see fit.
+  //
   let result = null
-
   try {
     //
     // Flatten the results as one array
     //
-    result = (await Promise.all(promises))
-
-    result = (result.map(r => {
+    result = ((await Promise.all(promises)).map(r => {
       //
       // In the case r is undefined or null
       //
@@ -111,7 +133,7 @@ module.exports = async function (context, myTimer) {
   }
 
   //
-  // NOW, ensure unique entries only
+  // Ensure unique entries only
   //
   let content = null
   {
@@ -130,12 +152,10 @@ module.exports = async function (context, myTimer) {
 
   //
   // Capture these for meta file
+  // This should
   //
   const firstId = content[0].messageId
   const lastId = content[content.length - 1].messageId
-
-  console.log(`firstId: ${firstId}`)
-  console.log(`lastId: ${lastId}`)
 
   try {
     content = JSON.stringify(content)
@@ -149,7 +169,7 @@ module.exports = async function (context, myTimer) {
   // Then write the file to Azure Blob Storage with begin and end
   //
   {
-    const filename = ['all', '.json'].join('')
+    const filename = ['merged', '.json'].join('')
     const { err, data } = await write({
       account,
       content,
@@ -160,7 +180,6 @@ module.exports = async function (context, myTimer) {
       console.error(err)
       return { err }
     }
-    console.log(data)
     writes.push(data)
   }
 
@@ -186,9 +205,10 @@ module.exports = async function (context, myTimer) {
       console.error(err)
       return { err }
     }
-    console.log(data)
     writes.push(data)
   }
 
-  return { data: writes.join('--') }
+  const output = writes.join('--')
+  console.log(output)
+  return { data: output }
 }
