@@ -1,4 +1,5 @@
 require('dotenv').config()
+require('./array-flat-polyfill')
 
 const {
   read,
