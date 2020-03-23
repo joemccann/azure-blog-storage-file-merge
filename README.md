@@ -13,7 +13,7 @@ and Local Development
 VS Code Extension for Local Development
 - [Node.js LTS Version](https://nodejs.org/en/about/releases/)
 
-## Usage
+## Installation
 
 ```sh
 npm i -S joemccann/azure-blob-storage-file-merge
@@ -54,8 +54,11 @@ look at the [AZURE.md](AZURE.md) document.
     "FILENAME_PREFIX": "OPTIONAL-PREFIX-FOR-FILES-IN-STORAGE-CONTAINER"
   }
 }
-
 ```
+
+## Usage
+
+- Coming soon...
 
 ## Tests
 
