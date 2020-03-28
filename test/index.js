@@ -8,8 +8,8 @@ test('sanity', t => {
 })
 
 test('pass - merge files and move', async t => {
-  const { err, data } = await mergeFiles()
-  console.error(err)
-  console.dir(data)
-  t.end()
+	const { err, data } = await mergeFiles()
+	t.ok(!err)
+	t.ok(data)
+	t.end()
 })
