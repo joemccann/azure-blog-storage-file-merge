@@ -2,6 +2,7 @@ require('dotenv').config()
 require('./array-flat-polyfill')
 
 const {
+  move,
   read,
   listFilesByName,
   write
@@ -53,6 +54,34 @@ const unique = ({ input = [] }) => {
 
 module.exports = async (ctx) => {
   //
+  // First, fetch the current `merged.json` file (assuming it exists)
+  // for if it doesn't exist then this is the first time ever running this
+  // function
+  //
+  let originalMergedFile = null
+  const { err, data } = await read({
+    account,
+    container,
+    filename: 'merged.json'
+  })
+
+  if (err) {
+    if (err.message === 'Unexpected status code: 404') {
+      originalMergedFile = []
+    } else {
+      console.error(err)
+      return { err }
+    }
+  }
+
+  try {
+    originalMergedFile = JSON.parse(data)
+  } catch (err) {
+    console.error(err)
+    return { err }
+  }
+
+  //
   // Fetch all files in container
   //
   let files = null
@@ -77,7 +106,7 @@ module.exports = async (ctx) => {
   // Filter out files that don't have the prefix
   //
   if (prefix) {
-    files = files.filter(file => file.includes(prefix))
+    files = files.filter(file => file.startsWith(prefix))
   }
 
   //
@@ -115,6 +144,7 @@ module.exports = async (ctx) => {
   // Modify as you see fit.
   //
   let result = null
+
   try {
     //
     // Flatten the results as one array
@@ -127,7 +157,9 @@ module.exports = async (ctx) => {
         const { data } = r
         return [...data]
       }
-    })).flat()
+    }))
+    result.push(originalMergedFile)
+    result = result.flat()
   } catch (err) {
     console.error(err)
     return { err }
@@ -157,6 +189,7 @@ module.exports = async (ctx) => {
   //
   const firstId = content[0].messageId
   const lastId = content[content.length - 1].messageId
+  const output = {}
 
   try {
     content = JSON.stringify(content)
@@ -209,7 +242,55 @@ module.exports = async (ctx) => {
     writes.push(data)
   }
 
-  const output = writes.join('--')
-  console.log(output)
+  //
+  // Add results of writes to output
+  //
+  output.writes = writes
+
+  //
+  // Write files to archive for backup
+  //
+  {
+    const destination = 'archive'
+
+    const promises = files.map(async (filename, i) => {
+      console.log(`>>> Moving ${filename}`)
+
+      const { err, data } = await move({
+        account,
+        destination,
+        container,
+        filename
+      })
+
+      if (err) {
+        console.error(err)
+        return { err }
+      }
+
+      return { data }
+    })
+
+    let moves = null
+    try {
+    //
+    // Flatten the results as one array
+    //
+      moves = ((await Promise.all(promises)).map(r => {
+      //
+      // In the case r is undefined or null
+      //
+        if (r) {
+          const { data } = r
+          return [...data]
+        }
+      }))
+    } catch (err) {
+      console.error(err)
+      return { err }
+    }
+    output.moves = moves
+  }
+
   return { data: output }
 }
